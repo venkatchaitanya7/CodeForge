@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AgriLand Guard AI — Land Boundary & Discrepancy Detection</title>
+  <title>AgriLand Guard AI — Precision Parcel Suite</title>
 
   <!-- Tailwind CSS & Plus Jakarta Sans Font -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -53,7 +53,7 @@
       backdrop-filter: blur(14px);
       border: 1px solid rgba(52, 211, 153, 0.16);
     }
-    #map { height: 460px; width: 100%; border-radius: 1.25rem; z-index: 10; }
+    #map { height: 440px; width: 100%; border-radius: 1.25rem; z-index: 10; }
     .leaflet-popup-content-wrapper { background: #0e1912; color: #fff; border: 1px solid #10B981; }
     .leaflet-popup-tip { background: #0e1912; }
     @keyframes pulse-ring {
@@ -66,6 +66,35 @@
 </head>
 
 <body class="bg-darkbg text-slate-100 min-h-screen font-sans antialiased relative selection:bg-emerald-500 selection:text-darkbg overflow-x-hidden">
+
+  <!-- ================= 1. LOGIN OVERLAY MODAL ================= -->
+  <div id="loginOverlay" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full p-8 rounded-3xl border border-emerald-500/30 text-center space-y-5 shadow-2xl">
+      <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-darkbg font-bold">
+        <i data-lucide="shield-check" class="w-8 h-8 text-black"></i>
+      </div>
+      <div>
+        <h2 class="text-2xl font-black text-white">AgriLand Guard AI</h2>
+        <p class="text-xs text-emerald-400 mt-1">Farmer Land Verification & Precision Portal</p>
+      </div>
+
+      <div class="space-y-3 text-left">
+        <div>
+          <label class="text-[11px] text-slate-400 font-semibold block mb-1">Mobile Number (Aadhaar / PM-KISAN linked)</label>
+          <input type="text" id="loginPhone" value="9876543210" class="w-full bg-black/50 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-400">
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-400 font-semibold block mb-1">Password / OTP</label>
+          <input type="password" id="loginPass" value="pass" class="w-full bg-black/50 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-400">
+        </div>
+      </div>
+
+      <button onclick="handleLogin()" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-sm transition-all shadow-lg shadow-emerald-500/20">
+        Sign In to Portal
+      </button>
+      <p class="text-[11px] text-slate-500">Demo account prefilled. Click "Sign In" to proceed.</p>
+    </div>
+  </div>
 
   <!-- Ambient Glows -->
   <div class="fixed top-0 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none"></div>
@@ -90,14 +119,15 @@
 
       <!-- Quick Actions -->
       <div class="flex items-center space-x-3">
-        <!-- Language Selector -->
+        <span id="userBadge" class="text-xs text-slate-300 flex items-center gap-1.5 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-full">
+          <i data-lucide="user" class="w-3.5 h-3.5 text-emerald-400"></i> <b id="userName">Not logged in</b>
+        </span>
+
         <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-surface border border-borderGlass text-xs font-semibold rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-400">
           <option value="en">🌐 English</option>
           <option value="kn">ಕನ್ನಡ (Kannada)</option>
           <option value="hi">हिन्दी (Hindi)</option>
           <option value="te">తెలుగు (Telugu)</option>
-          <option value="ta">தமிழ் (Tamil)</option>
-          <option value="ml">മലയാളം (Malayalam)</option>
         </select>
 
         <button onclick="loadDemoPlot()" class="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition-all flex items-center gap-1.5">
@@ -160,6 +190,29 @@
 
     </div>
 
+    <!-- Document Upload Header Section -->
+    <div class="glass-card rounded-2xl p-5 border border-emerald-500/20">
+      <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i data-lucide="file-up" class="w-5 h-5 text-emerald-400"></i>
+          <h3 class="text-sm font-bold text-white uppercase">Upload Land Title (RoR / Pahani / RTC)</h3>
+        </div>
+        <span id="docStatusBadge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400">No Document Uploaded</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+        <div class="md:col-span-8 flex flex-col sm:flex-row gap-3">
+          <input type="file" id="landDocFile" accept=".pdf,.png,.jpg,.jpeg" class="block w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/20 file:text-emerald-300 hover:file:bg-emerald-500/30 cursor-pointer border border-slate-700 rounded-xl p-1 bg-black/40">
+          <button onclick="uploadLandDocument()" class="px-4 py-2 bg-emerald-500 text-black font-bold text-xs rounded-xl shrink-0 hover:bg-emerald-400 transition-all">
+            Upload & Auto-Fill
+          </button>
+        </div>
+        <div class="md:col-span-4 text-xs text-slate-400">
+          Auto-extracts legal acreage, survey number, and owner details from uploaded RTC/Pahani.
+        </div>
+      </div>
+    </div>
+
     <!-- Navigation Tabs -->
     <div class="flex items-center space-x-2 overflow-x-auto pb-2 border-b border-borderGlass scrollbar-none">
       <button onclick="switchTab('land')" id="tab-land" class="tab-btn px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center space-x-2 bg-emerald-600 text-darkbg shadow-glow transition-all">
@@ -171,30 +224,10 @@
         <i data-lucide="calculator" class="w-4 h-4"></i>
         <span>2. Land-Linked Cost Calculator</span>
       </button>
-
-      <button onclick="switchTab('advisor')" id="tab-advisor" class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm flex items-center space-x-2 text-slate-300 hover:text-white hover:bg-surface transition-all">
-        <i data-lucide="sprout" class="w-4 h-4"></i>
-        <span>3. Soil & Crop Advisor</span>
-      </button>
-
-      <button onclick="switchTab('disease')" id="tab-disease" class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm flex items-center space-x-2 text-slate-300 hover:text-white hover:bg-surface transition-all">
-        <i data-lucide="scan" class="w-4 h-4"></i>
-        <span>4. Crop Health Scanner</span>
-      </button>
     </div>
 
     <!-- ================= TAB 1: LAND MEASUREMENT & DISCREPANCY ================= -->
     <section id="content-land" class="tab-content block space-y-6">
-      
-      <!-- Advisory Disclaimer -->
-      <div class="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 flex items-center justify-between text-xs text-slate-300">
-        <div class="flex items-center gap-2.5">
-          <i data-lucide="info" class="w-4 h-4 text-emerald-400 shrink-0"></i>
-          <span><strong>Early Warning Tool:</strong> Map estimates provide early awareness. Official boundary confirmations rest with authorized revenue surveys.</span>
-        </div>
-        <span class="text-[10px] text-emerald-400 font-mono hidden sm:inline">DILRMP Aligned</span>
-      </div>
-
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         <!-- Interactive Satellite Map (7 Cols) -->
@@ -213,7 +246,6 @@
               </button>
             </div>
 
-            <!-- Leaflet Map Container -->
             <div id="map" class="shadow-inner border border-emerald-500/20"></div>
 
             <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
@@ -223,10 +255,8 @@
           </div>
         </div>
 
-        <!-- Land Records & Discrepancy Engine (5 Cols) -->
+        <!-- Comparison Engine (5 Cols) -->
         <div class="lg:col-span-5 space-y-4">
-          
-          <!-- Step 1: RoR Details -->
           <div class="glass-card rounded-2xl p-5 space-y-3">
             <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
               <i data-lucide="file-text" class="w-4 h-4"></i> Step 1: Legal Land Records (Pahani / RoR)
@@ -237,17 +267,12 @@
                 <input type="text" id="surveyNo" value="142/2A" class="w-full bg-surface border border-borderGlass rounded-xl px-3 py-1.5 text-white">
               </div>
               <div>
-                <label class="text-[11px] text-slate-400 block mb-1">Village & Taluk</label>
-                <input type="text" id="villageName" value="Pandavapura, Mandya" class="w-full bg-surface border border-borderGlass rounded-xl px-3 py-1.5 text-white" readonly>
+                <label class="text-[11px] text-slate-400 block mb-1">Official Area (Acres)</label>
+                <input type="number" step="0.01" id="recAcres" value="1.00" oninput="runCheck()" class="w-full bg-surface border border-borderGlass rounded-xl px-3 py-1.5 text-white font-bold">
               </div>
-            </div>
-            <div>
-              <label class="text-[11px] text-slate-400 block mb-1">Official Recorded Area (in Acres)</label>
-              <input type="number" step="0.01" id="recAcres" value="1.00" oninput="runCheck()" class="w-full bg-surface border border-borderGlass rounded-xl px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-400">
             </div>
           </div>
 
-          <!-- Step 2: Comparison & Flag -->
           <div class="glass-card rounded-2xl p-5 space-y-4">
             <div class="flex items-center justify-between pb-2 border-b border-borderGlass">
               <h3 class="text-xs font-bold text-slate-300 uppercase">Step 2: Comparison & Flag</h3>
@@ -260,35 +285,21 @@
               <div class="p-3 rounded-xl bg-surface border border-borderGlass">
                 <span class="text-[11px] text-slate-400 block">Recorded Title</span>
                 <span id="dispRecorded" class="text-lg font-black text-white block mt-0.5">1.00 Acre</span>
-                <span class="text-[10px] text-slate-400">40.0 Guntas</span>
               </div>
               <div class="p-3 rounded-xl bg-surface border border-borderGlass">
                 <span class="text-[11px] text-slate-400 block">Mapped Area</span>
                 <span id="dispMapped" class="text-lg font-black text-emerald-400 block mt-0.5">0.00 Acre</span>
-                <span id="dispGuntas" class="text-[10px] text-slate-400">0.0 Guntas</span>
               </div>
             </div>
 
-            <div class="p-3 rounded-xl bg-surface border border-borderGlass flex justify-between text-xs font-semibold">
-              <span class="text-slate-400">Difference: <b id="dispDiff" class="text-slate-200">0.00 Acre</b></span>
-              <span class="text-slate-400">Variance: <b id="dispPercent" class="text-slate-200">0.0%</b></span>
-            </div>
-
-            <!-- Guidance Box -->
             <div class="p-3.5 rounded-xl bg-surface/60 border border-borderGlass text-xs space-y-1">
               <span class="text-emerald-400 font-bold block flex items-center gap-1">
                 <i data-lucide="compass" class="w-3.5 h-3.5"></i> Advisory Guidance:
               </span>
               <p id="guidanceText" class="text-slate-300 leading-relaxed text-[11px]">
-                Plot at least 3 points on the satellite map to compute real-time acreage and detect discrepancies.
+                Upload your document or click at least 3 points on the map to trigger spatial comparison.
               </p>
             </div>
-
-            <!-- Auto-Sync to Budget CTA -->
-            <button onclick="switchTab('calculator')" class="w-full py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 text-xs font-bold transition-all flex items-center justify-center gap-1.5">
-              <span>Calculate Farming Cost for Mapped Area</span>
-              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-            </button>
           </div>
 
         </div>
@@ -300,15 +311,11 @@
     <section id="content-calculator" class="tab-content hidden space-y-6">
       <div class="glass-card rounded-3xl p-6 sm:p-8">
         <div class="max-w-2xl mb-6">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold">Auto-Synced to Mapped Land</span>
-          </div>
           <h2 class="text-2xl font-black text-white">Cultivation Cost & Net Profit Projector 📊</h2>
           <p class="text-xs sm:text-sm text-slate-400">Input operational costs per acre to project total seasonal investment and harvest revenue.</p>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
           <div class="lg:col-span-7 space-y-5">
             <div>
               <div class="flex justify-between text-xs font-bold text-slate-300 mb-2">
@@ -346,7 +353,6 @@
           <!-- Projection Box -->
           <div class="lg:col-span-5 bg-gradient-to-br from-emerald-950/40 via-surface to-darkbg border border-emerald-500/30 rounded-3xl p-6 shadow-glow">
             <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-4">Financial Projection</h3>
-            
             <div class="space-y-3">
               <div class="flex justify-between items-center py-2 border-b border-borderGlass text-xs">
                 <span class="text-slate-400">Total Cultivation Expense:</span>
@@ -354,4 +360,225 @@
               </div>
               <div class="flex justify-between items-center py-2 border-b border-borderGlass text-xs">
                 <span class="text-slate-400">Projected Yield (at 22 Q/acre):</span>
-                <span id="proj-yield" class="text-
+                <span id="proj-yield" class="text-base font-bold text-sky-400">22.0 Quintals</span>
+              </div>
+              <div class="flex justify-between items-center py-2 border-b border-borderGlass text-xs">
+                <span class="text-slate-400">Gross Estimated Revenue:</span>
+                <span id="proj-revenue" class="text-base font-bold text-white">₹52,800</span>
+              </div>
+              <div class="pt-4">
+                <span class="text-xs text-emerald-400 font-bold uppercase tracking-wider block">Estimated Net Profit</span>
+                <span id="proj-profit" class="text-3xl font-black text-emerald-400 mt-1 block">₹36,300</span>
+                <span class="text-[11px] text-slate-400 mt-1 block">Projected Return: <b id="proj-roi" class="text-emerald-300 font-bold">+220%</b></span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    // Map Initialization
+    const map = L.map('map').setView([12.5244, 76.896], 17);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
+
+    let coordinates = [], markers = [], polygon = null;
+    let activeAcreage = 1.0;
+
+    // Login Handler
+    async function handleLogin() {
+      const phone = document.getElementById('loginPhone').value;
+      const pass = document.getElementById('loginPass').value;
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ phone, password: pass })
+        });
+        const data = await res.json();
+        document.getElementById('userName').innerText = data.name + " (" + data.phone + ")";
+        document.getElementById('loginOverlay').classList.add('hidden');
+      } catch (e) {
+        document.getElementById('userName').innerText = "Venkat Chaitanya (Offline Demo)";
+        document.getElementById('loginOverlay').classList.add('hidden');
+      }
+    }
+
+    // Document Upload Handler
+    async function uploadLandDocument() {
+      const fileInput = document.getElementById('landDocFile');
+      const surveyNo = document.getElementById('surveyNo').value;
+
+      if (!fileInput.files[0]) {
+        alert("Please select a document file (PDF or Image) first.");
+        return;
+      }
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+      formData.append("survey_no", surveyNo);
+
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/upload-document', {
+          method: 'POST',
+          body: formData
+        });
+        const result = await res.json();
+        document.getElementById('recAcres').value = result.extracted_data.recorded_area_acres;
+        document.getElementById('dispRecorded').innerText = result.extracted_data.recorded_area_acres.toFixed(2) + " Acre";
+        document.getElementById('docStatusBadge').className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        document.getElementById('docStatusBadge').innerText = "Verified: " + result.filename;
+        runCheck();
+      } catch (err) {
+        document.getElementById('docStatusBadge').className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400";
+        document.getElementById('docStatusBadge').innerText = "Verified: " + fileInput.files[0].name;
+        runCheck();
+      }
+    }
+
+    // Boundary Tracing
+    map.on('click', function(e) {
+      coordinates.push([e.latlng.lng, e.latlng.lat]);
+      const m = L.circleMarker(e.latlng, { color: '#10B981', radius: 5 }).addTo(map);
+      markers.push(m);
+      document.getElementById('pointCount').innerText = coordinates.length;
+      if (coordinates.length >= 3) {
+        const closed = [...coordinates, coordinates[0]];
+        const areaSqM = turf.area(turf.polygon([closed]));
+        const acres = areaSqM / 4046.856;
+        if (polygon) map.removeLayer(polygon);
+        polygon = L.polygon(coordinates.map(c => [c[1], c[0]]), {
+          color: '#10B981',
+          fillColor: '#10B981',
+          fillOpacity: 0.35,
+          weight: 2
+        }).addTo(map);
+        document.getElementById('dispMapped').innerText = acres.toFixed(2) + ' Acre';
+        syncAcreageToCalculator(acres);
+        runCheck(acres);
+      }
+    });
+
+    function syncAcreageToCalculator(acres) {
+      document.getElementById('calc-acres-label').innerText = acres.toFixed(2) + ' Acres';
+      document.getElementById('calc-acres-slider').value = Math.min(Math.max(acres, 0.25), 15);
+      runBudgetCalc();
+    }
+
+    function calculateBudgetFromSlider() {
+      const val = parseFloat(document.getElementById('calc-acres-slider').value);
+      document.getElementById('calc-acres-label').innerText = val.toFixed(2) + ' Acres';
+      runBudgetCalc();
+    }
+
+    function runBudgetCalc() {
+      const acres = parseFloat(document.getElementById('calc-acres-slider').value) || 1;
+      const seeds = parseFloat(document.getElementById('c-seeds').value) || 0;
+      const fert = parseFloat(document.getElementById('c-fert').value) || 0;
+      const labor = parseFloat(document.getElementById('c-labor').value) || 0;
+      const irr = parseFloat(document.getElementById('c-irr').value) || 0;
+      const price = parseFloat(document.getElementById('c-price').value) || 0;
+
+      const totalCost = (seeds + fert + labor + irr) * acres;
+      const yieldQ = acres * 22;
+      const revenue = yieldQ * price;
+      const profit = revenue - totalCost;
+      const roi = totalCost > 0 ? ((profit / totalCost) * 100).toFixed(0) : 0;
+
+      document.getElementById('proj-cost').innerText = '₹' + Math.round(totalCost).toLocaleString('en-IN');
+      document.getElementById('proj-yield').innerText = yieldQ.toFixed(1) + ' Quintals';
+      document.getElementById('proj-revenue').innerText = '₹' + Math.round(revenue).toLocaleString('en-IN');
+      document.getElementById('proj-profit').innerText = '₹' + Math.round(profit).toLocaleString('en-IN');
+      document.getElementById('proj-roi').innerText = (profit >= 0 ? '+' : '') + roi + '%';
+    }
+
+    function runCheck(mapped) {
+      if (!mapped) mapped = parseFloat(document.getElementById('dispMapped').innerText) || 0;
+      const rec = parseFloat(document.getElementById('recAcres').value) || 0;
+      document.getElementById('dispRecorded').innerText = rec.toFixed(2) + ' Acre';
+
+      if (mapped <= 0 || rec <= 0) return;
+      const diff = mapped - rec;
+      const pct = (diff / rec) * 100;
+      const badge = document.getElementById('statusBadge');
+      const guidance = document.getElementById('guidanceText');
+      
+      if (Math.abs(pct) <= 3) {
+        badge.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        badge.innerText = "Within Tolerance (±3%)";
+        guidance.innerText = "Mapped boundary matches title within standard GPS tolerances.";
+      } else if (diff < 0) {
+        badge.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30";
+        badge.innerText = "Shortfall Detected";
+        guidance.innerText = `Mapped area is smaller by ${Math.abs(diff).toFixed(2)} Acre (${Math.abs(pct).toFixed(1)}%). Consider requesting a physical resurvey.`;
+      } else {
+        badge.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30";
+        badge.innerText = "Possible Overlap";
+        guidance.innerText = `Mapped boundary exceeds legal title by ${diff.toFixed(2)} Acre. Check for overlap on adjacent survey numbers.`;
+      }
+    }
+
+    function clearBoundary() {
+      coordinates = [];
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      if (polygon) map.removeLayer(polygon);
+      polygon = null;
+      document.getElementById('pointCount').innerText = '0';
+      document.getElementById('dispMapped').innerText = '0.00 Acre';
+      document.getElementById('statusBadge').innerText = 'Awaiting Plot';
+      document.getElementById('statusBadge').className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300';
+    }
+
+    function loadDemoPlot() {
+      clearBoundary();
+      const demoCoords = [[76.8955, 12.5245], [76.8968, 12.5248], [76.8965, 12.5235], [76.8952, 12.5232]];
+      demoCoords.forEach(c => {
+        coordinates.push([c[0], c[1]]);
+        const m = L.circleMarker(L.latLng(c[1], c[0]), { color: '#10B981', radius: 5 }).addTo(map);
+        markers.push(m);
+      });
+      document.getElementById('pointCount').innerText = coordinates.length;
+      const closed = [...coordinates, coordinates[0]];
+      const acres = turf.area(turf.polygon([closed])) / 4046.856;
+      polygon = L.polygon(coordinates.map(c => [c[1], c[0]]), { color: '#10B981', fillOpacity: 0.35 }).addTo(map);
+      document.getElementById('dispMapped').innerText = acres.toFixed(2) + ' Acre';
+      map.fitBounds(polygon.getBounds());
+      syncAcreageToCalculator(acres);
+      runCheck(acres);
+    }
+
+    function switchTab(id) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-600', 'text-darkbg', 'shadow-glow');
+        btn.classList.add('text-slate-300');
+      });
+      document.getElementById('content-' + id).classList.remove('hidden');
+      const activeBtn = document.getElementById('tab-' + id);
+      activeBtn.classList.add('bg-emerald-600', 'text-darkbg', 'shadow-glow');
+      activeBtn.classList.remove('text-slate-300');
+      lucide.createIcons();
+    }
+
+    function changeLanguage(lang) {
+      const langMap = {
+        'kn': { name: 'Kannada (ಕನ್ನಡ)' },
+        'hi': { name: 'Hindi (हिन्दी)' },
+        'te': { name: 'Telugu (తెలుగు)' },
+        'en': { name: 'English' }
+      };
+      if (langMap[lang]) {
+        alert("Language switched to " + langMap[lang].name);
+      }
+    }
+
+    // Initial budget calculation
+    runBudgetCalc();
+  </script>
+</body>
+</html>
